@@ -1,0 +1,403 @@
+/* ===================================================
+   lootbox.css — Animation overlay plein écran
+   3 phases : anticipation · ouverture · reveal
+   =================================================== */
+
+/* ══════════════════════════════════════════════════
+   OVERLAY
+   ══════════════════════════════════════════════════ */
+
+.lootbox-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(4, 4, 10, 0.93);
+  backdrop-filter: blur(6px);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.lootbox-overlay--visible {
+  opacity: 1;
+}
+
+.lootbox-overlay--exit {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+}
+
+/* ══════════════════════════════════════════════════
+   CANVAS PARTICULES
+   ══════════════════════════════════════════════════ */
+
+.lootbox-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* ══════════════════════════════════════════════════
+   FLASH LUMINEUX (phase 2)
+   ══════════════════════════════════════════════════ */
+
+.lootbox-flash {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.lootbox-flash--active {
+  animation: flashOut 0.65s ease-out forwards;
+}
+
+@keyframes flashOut {
+  0%   { opacity: 0.95; }
+  15%  { opacity: 0.75; }
+  100% { opacity: 0; }
+}
+
+/* ══════════════════════════════════════════════════
+   BOÎTE LOOTBOX (phases 1 & 2)
+   ══════════════════════════════════════════════════ */
+
+.lootbox-box {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  width: 150px;
+  height: 130px;
+  border-radius: 10px;
+  border: 2px solid;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  pointer-events: none;
+  /* box-shadow piloté par JS pendant la phase 1 */
+}
+
+/* Couleurs par tier */
+.lootbox-box--bronze { border-color: var(--color-bronze); }
+.lootbox-box--silver { border-color: var(--color-silver); }
+.lootbox-box--gold   { border-color: var(--color-gold); }
+
+/* --- Couvercle --- */
+.lootbox-box-lid {
+  height: 36%;
+  border-bottom: 2px solid;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lootbox-box--bronze .lootbox-box-lid {
+  background: linear-gradient(135deg, #3a1c07 0%, #6b4018 100%);
+  border-bottom-color: var(--color-bronze);
+}
+.lootbox-box--silver .lootbox-box-lid {
+  background: linear-gradient(135deg, #18222e 0%, #2e3d50 100%);
+  border-bottom-color: var(--color-silver);
+}
+.lootbox-box--gold .lootbox-box-lid {
+  background: linear-gradient(135deg, #3a2d00 0%, #7a6500 100%);
+  border-bottom-color: var(--color-gold);
+}
+
+/* Charnière centrale du couvercle */
+.lootbox-box-hinge {
+  width: 28px;
+  height: 7px;
+  border-radius: 4px;
+  border: 1px solid;
+}
+.lootbox-box--bronze .lootbox-box-hinge {
+  background: var(--color-bronze-dim);
+  border-color: var(--color-bronze);
+}
+.lootbox-box--silver .lootbox-box-hinge {
+  background: var(--color-silver-dim);
+  border-color: var(--color-silver);
+}
+.lootbox-box--gold .lootbox-box-hinge {
+  background: var(--color-gold-dim);
+  border-color: var(--color-gold);
+}
+
+/* --- Corps --- */
+.lootbox-box-body {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lootbox-box--bronze .lootbox-box-body {
+  background: linear-gradient(180deg, #200e03 0%, #120800 100%);
+}
+.lootbox-box--silver .lootbox-box-body {
+  background: linear-gradient(180deg, #101820 0%, #080e14 100%);
+}
+.lootbox-box--gold .lootbox-box-body {
+  background: linear-gradient(180deg, #201800 0%, #100c00 100%);
+}
+
+/* Icône tier */
+.lootbox-box-icon {
+  font-size: 2.4rem;
+  line-height: 1;
+  filter: drop-shadow(0 0 10px currentColor);
+}
+.lootbox-box--bronze .lootbox-box-icon { color: var(--color-bronze); }
+.lootbox-box--silver .lootbox-box-icon { color: var(--color-silver); }
+.lootbox-box--gold   .lootbox-box-icon { color: var(--color-gold); }
+
+/* Reflet animé sur la box en phase 1 */
+.lootbox-box::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.04) 50%,
+    transparent 70%
+  );
+  background-size: 200% 200%;
+  animation: boxShine 2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes boxShine {
+  0%   { background-position: 200% 200%; }
+  50%  { background-position: 0% 0%; }
+  100% { background-position: 200% 200%; }
+}
+
+/* --- Animation d'explosion (phase 2) --- */
+@keyframes lootboxExplode {
+  0%   { transform: translate(-50%, -50%) scale(1);   opacity: 1; }
+  25%  { transform: translate(-50%, -50%) scale(1.25); opacity: 0.9; }
+  100% { transform: translate(-50%, -50%) scale(2.8);  opacity: 0; }
+}
+
+.lootbox-box--explode {
+  animation: lootboxExplode 0.55s cubic-bezier(0.25, 0, 0.3, 1) forwards;
+}
+
+/* ══════════════════════════════════════════════════
+   REVEAL — CARTE DU JEU (phase 3)
+   ══════════════════════════════════════════════════ */
+
+.lootbox-reveal {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  pointer-events: none; /* activé seulement via --enter */
+}
+
+.lootbox-reveal--enter {
+  pointer-events: auto;
+}
+
+/* Carte */
+.lootbox-reveal-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-mid);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  width: 100%;
+  max-width: 480px;
+  cursor: pointer;
+  /* État initial pour l'animation */
+  opacity: 0;
+  transform: scale(0.5);
+}
+
+/* Glow persistant par tier */
+.lootbox-reveal-card--bronze {
+  border-color: var(--color-bronze-dim);
+  box-shadow:
+    0 0 50px var(--color-bronze-glow),
+    0 0 110px rgba(205, 127, 50, 0.1),
+    inset 0 0 30px rgba(205, 127, 50, 0.04);
+}
+.lootbox-reveal-card--silver {
+  border-color: var(--color-silver-dim);
+  box-shadow:
+    0 0 50px var(--color-silver-glow),
+    0 0 110px rgba(184, 196, 208, 0.08);
+}
+.lootbox-reveal-card--gold {
+  border-color: var(--color-gold-dim);
+  box-shadow:
+    0 0 55px var(--color-gold-glow),
+    0 0 130px rgba(255, 215, 0, 0.14),
+    inset 0 0 30px rgba(255, 215, 0, 0.04);
+}
+
+/* Animation scale-up élastique */
+@keyframes revealCardIn {
+  0%   { opacity: 0;   transform: scale(0.45); }
+  55%  { opacity: 1;   transform: scale(1.05); }
+  75%  { transform: scale(0.98); }
+  100% { opacity: 1;   transform: scale(1); }
+}
+
+.lootbox-reveal--enter .lootbox-reveal-card {
+  animation: revealCardIn 0.65s cubic-bezier(0.34, 1.3, 0.64, 1) forwards;
+}
+
+/* Pulsation du glow pour l'or */
+@keyframes goldGlowPulse {
+  0%, 100% {
+    box-shadow:
+      0 0 55px var(--color-gold-glow),
+      0 0 130px rgba(255, 215, 0, 0.14),
+      inset 0 0 30px rgba(255, 215, 0, 0.04);
+  }
+  50% {
+    box-shadow:
+      0 0 80px rgba(255, 215, 0, 0.65),
+      0 0 180px rgba(255, 215, 0, 0.2),
+      inset 0 0 40px rgba(255, 215, 0, 0.07);
+  }
+}
+
+.lootbox-reveal--enter .lootbox-reveal-card--gold {
+  animation:
+    revealCardIn 0.65s cubic-bezier(0.34, 1.3, 0.64, 1) forwards,
+    goldGlowPulse 2.2s ease-in-out 0.65s infinite;
+}
+
+/* Image header Steam (460×215) */
+.lootbox-reveal-image-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 460 / 215;
+  overflow: hidden;
+  background: #000;
+}
+
+.lootbox-reveal-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Dégradé bas de l'image */
+.lootbox-reveal-image-wrap::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 45%;
+  background: linear-gradient(to top, var(--bg-card), transparent);
+  pointer-events: none;
+}
+
+/* Badge tier (réutilise les classes de main.css) */
+.lootbox-reveal-badge {
+  position: absolute;
+  top: 0.7rem;
+  right: 0.7rem;
+  z-index: 1;
+  padding: 0.28rem 0.7rem;
+  border-radius: 5px;
+  font-family: var(--font-display);
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  backdrop-filter: blur(6px);
+}
+
+/* Corps de la carte */
+.lootbox-reveal-body {
+  padding: 0.9rem 1.25rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.lootbox-reveal-name {
+  font-size: 1.08rem;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.3;
+}
+
+.lootbox-reveal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.lootbox-reveal-hint {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-align: center;
+  letter-spacing: 0.08em;
+  font-style: italic;
+  opacity: 0.65;
+  margin-top: 0.1rem;
+}
+
+/* ══════════════════════════════════════════════════
+   BOUTON PASSER
+   ══════════════════════════════════════════════════ */
+
+.lootbox-skip {
+  position: absolute;
+  bottom: 1.75rem;
+  right: 1.75rem;
+  z-index: 10;
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border-mid);
+  border-radius: var(--radius);
+  padding: 0.42rem 0.88rem;
+  font-size: 0.76rem;
+  font-family: var(--font-body);
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+.lootbox-skip:hover {
+  background: var(--bg-card-hover);
+  color: var(--text);
+  border-color: #303048;
+}
+
+/* ══════════════════════════════════════════════════
+   RESPONSIVE
+   ══════════════════════════════════════════════════ */
+
+@media (max-width: 540px) {
+  .lootbox-reveal {
+    padding: 1rem;
+    align-items: flex-end;
+    padding-bottom: 4rem;
+  }
+  .lootbox-reveal-card { max-width: 100%; }
+
+  .lootbox-box {
+    width: 120px;
+    height: 104px;
+  }
+  .lootbox-box-icon { font-size: 1.9rem; }
+}

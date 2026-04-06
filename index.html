@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Steam Wishlist Lootbox</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/lootbox.css" />
+</head>
+<body>
+
+  <!-- ============================================================
+       VUE : ACCUEIL
+       ============================================================ -->
+  <div id="view-home" class="view">
+    <header class="app-header">
+      <h1 class="app-title">Steam Wishlist <span class="accent">Lootbox</span></h1>
+      <p class="app-subtitle">Tire un jeu au hasard dans ta wishlist Steam</p>
+    </header>
+
+    <main class="home-main">
+      <form id="loadForm" class="home-form" novalidate>
+        <label for="steamId" class="form-label">Steam ID (64-bit)</label>
+        <div class="input-group">
+          <input
+            type="text"
+            id="steamId"
+            name="steamId"
+            class="form-input"
+            placeholder="76561198XXXXXXXXX"
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <button type="submit" id="loadBtn" class="btn btn-primary">Charger</button>
+        </div>
+        <p id="homeError" class="form-error" aria-live="polite"></p>
+      </form>
+    </main>
+  </div>
+
+  <!-- ============================================================
+       VUE : CHARGEMENT
+       ============================================================ -->
+  <div id="view-loading" class="view">
+    <div class="loading-container">
+      <div class="loading-spinner"></div>
+      <p id="loadingStatus" class="loading-status">Récupération de la wishlist…</p>
+      <div class="progress-bar">
+        <div id="progressFill" class="progress-fill"></div>
+      </div>
+      <p id="loadingDetail" class="loading-detail"></p>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       VUE : DASHBOARD
+       ============================================================ -->
+  <div id="view-dashboard" class="view">
+
+    <header class="dashboard-header">
+      <h1 class="app-title-sm">Steam Wishlist <span class="accent">Lootbox</span></h1>
+      <div class="dashboard-actions">
+        <button id="resetPoolBtn" class="btn btn-ghost">↺ Reset pool</button>
+        <button id="newWishlistBtn" class="btn btn-ghost">⬅ Nouvelle wishlist</button>
+      </div>
+    </header>
+
+    <main class="dashboard-main">
+
+      <!-- Résumé des tiers -->
+      <section class="tiers-section">
+        <h2 class="section-title">Répartition</h2>
+        <div class="tiers-grid">
+
+          <div class="tier-card tier-bronze">
+            <div class="tier-card-icon">⚙</div>
+            <div class="tier-card-name">Bronze</div>
+            <div class="tier-card-count" id="pool-count-bronze">—</div>
+            <div class="tier-card-sub"  id="pool-sub-bronze">jeux</div>
+            <div class="tier-card-price-range">&lt; 10 €</div>
+          </div>
+
+          <div class="tier-card tier-silver">
+            <div class="tier-card-icon">✦</div>
+            <div class="tier-card-name">Argent</div>
+            <div class="tier-card-count" id="pool-count-silver">—</div>
+            <div class="tier-card-sub"  id="pool-sub-silver">jeux</div>
+            <div class="tier-card-price-range">10 € – 25 €</div>
+          </div>
+
+          <div class="tier-card tier-gold">
+            <div class="tier-card-icon">★</div>
+            <div class="tier-card-name">Or</div>
+            <div class="tier-card-count" id="pool-count-gold">—</div>
+            <div class="tier-card-sub"  id="pool-sub-gold">jeux</div>
+            <div class="tier-card-price-range">&gt; 25 €</div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- Boutons de tirage -->
+      <section class="draw-section">
+        <h2 class="section-title">Choisir un tier</h2>
+        <div class="draw-buttons">
+
+          <button class="draw-btn draw-btn-bronze" data-draw-tier="bronze" disabled>
+            <span class="draw-btn-icon">⚙</span>
+            <span class="draw-btn-label">Bronze</span>
+            <span class="draw-btn-count" id="btn-count-bronze">0 jeux</span>
+          </button>
+
+          <button class="draw-btn draw-btn-silver" data-draw-tier="silver" disabled>
+            <span class="draw-btn-icon">✦</span>
+            <span class="draw-btn-label">Argent</span>
+            <span class="draw-btn-count" id="btn-count-silver">0 jeux</span>
+          </button>
+
+          <button class="draw-btn draw-btn-gold" data-draw-tier="gold" disabled>
+            <span class="draw-btn-icon">★</span>
+            <span class="draw-btn-label">Or</span>
+            <span class="draw-btn-count" id="btn-count-gold">0 jeux</span>
+          </button>
+
+        </div>
+      </section>
+
+      <!-- Résultat du tirage -->
+      <section id="draw-result" class="draw-result" hidden>
+        <h2 class="section-title">Jeu tiré</h2>
+        <div id="draw-result-card" class="game-card"></div>
+      </section>
+
+      <!-- Historique -->
+      <section class="history-section">
+        <h2 class="section-title">
+          Historique
+          <span id="history-counters" class="history-counters"></span>
+        </h2>
+        <div id="history-list" class="history-list">
+          <p class="history-empty">Aucun tirage pour l'instant.</p>
+        </div>
+      </section>
+
+    </main>
+  </div><!-- /view-dashboard -->
+
+  <!-- ============================================================
+       VUE : POOL VIDE
+       ============================================================ -->
+  <div id="view-empty" class="view">
+    <div class="empty-container">
+      <div class="empty-icon">📦</div>
+      <h2 class="empty-title">Pool vidé !</h2>
+      <p class="empty-text">
+        Tu as tiré tous les jeux de ta wishlist. Impressionnant !
+      </p>
+      <button id="emptyResetBtn" class="btn btn-primary">↺ Recommencer depuis zéro</button>
+    </div>
+  </div>
+
+  <!-- Bouton mute global — visible en permanence, toutes vues -->
+  <button id="muteBtn" class="mute-btn-global" aria-label="Couper le son">🔊</button>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
