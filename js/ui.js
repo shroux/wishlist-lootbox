@@ -222,6 +222,9 @@ function _buildResultCardHTML(game) {
           Voir sur Steam ↗
         </a>
       </div>
+      <a class="game-card-difmark" href="https://difmark.com/link/rouxx" target="_blank" rel="noopener noreferrer sponsored">
+        💰 Trouve une clé moins chère sur Difmark
+      </a>
     </div>
   `;
 }

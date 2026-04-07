@@ -33,12 +33,13 @@
             id="steamId"
             name="steamId"
             class="form-input"
-            placeholder="76561198XXXXXXXXX"
+            placeholder="Entrez votre Steam ID 64-bit"
             autocomplete="off"
             spellcheck="false"
           />
           <button type="submit" id="loadBtn" class="btn btn-primary">Charger</button>
         </div>
+        <p class="form-hint">Exemple : <button type="button" class="hint-example" onclick="document.getElementById('steamId').value='76561198010565263'">76561198010565263</button> (Gabe Newell)</p>
         <p id="homeError" class="form-error" aria-live="polite"></p>
       </form>
     </main>

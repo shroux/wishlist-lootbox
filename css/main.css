@@ -171,6 +171,22 @@ body {
   box-shadow: 0 0 0 3px rgba(255,215,0,0.07);
 }
 
+.form-hint {
+  font-size: 0.83rem;
+  color: #888;
+  margin-top: 0.4rem;
+}
+.hint-example {
+  background: none;
+  border: none;
+  color: #7aaaff;
+  font-size: inherit;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline dotted;
+}
+.hint-example:hover { color: #aac8ff; }
+
 .form-error {
   font-size: 0.83rem;
   color: #e05858;
@@ -740,6 +756,26 @@ body {
   transition: color var(--ease);
 }
 .game-card-link:hover { color: #7aaaff; text-decoration: underline; }
+
+.game-card-difmark {
+  display: block;
+  margin-top: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: linear-gradient(135deg, #2a1a00, #3d2800);
+  border: 1px solid #c8860a;
+  border-radius: 8px;
+  color: #f5a623;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+  transition: background var(--ease), transform var(--ease);
+}
+.game-card-difmark:hover {
+  background: linear-gradient(135deg, #3d2800, #5a3c00);
+  transform: translateY(-1px);
+  color: #ffc44d;
+}
 
 /* =====================================================
    HISTORY
