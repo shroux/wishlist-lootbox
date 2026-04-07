@@ -31,7 +31,8 @@ export function classifyTier(priceCents) {
 export function partitionByTier(games) {
   const result = { bronze: [], silver: [], gold: [] };
   for (const game of games) {
-    result[game.tier].push(game);
+    const tier = (game.tier === 'silver' || game.tier === 'gold') ? game.tier : 'bronze';
+    result[tier].push(game);
   }
   return result;
 }

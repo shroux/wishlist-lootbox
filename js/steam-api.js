@@ -15,6 +15,7 @@ export const WORKER_URL = 'https://steam-wishlist-proxy.tual-gilles.workers.dev'
 
 const BATCH_SIZE   = 100;
 const BATCH_DELAY  = 200; // ms entre chaque batch pour ne pas saturer l'API
+const MAX_GAMES    = 2000; // limite d'import depuis la wishlist
 
 /** @typedef {import('./lootbox-engine.js').Game} Game */
 
@@ -40,8 +41,8 @@ export async function loadWishlist(steamId, onProgress) {
   // --- Étape 1 : récupérer la liste des appids ---
   const appids = await fetchAppids(steamId);
 
-  // --- Étape 2 : charger les détails par batch ---
-  const games = await fetchAllItems(appids, onProgress);
+  // --- Étape 2 : charger les détails par batch (limité à MAX_GAMES) ---
+  const games = await fetchAllItems(appids.slice(0, MAX_GAMES), onProgress);
 
   // --- Étape 3 : répartir en tiers ---
   const wishlist = { bronze: [], silver: [], gold: [] };
@@ -56,12 +57,27 @@ export async function loadWishlist(steamId, onProgress) {
 // Fonctions internes
 // ---------------------------------------------------------------------------
 
+const FETCH_TIMEOUT = 15_000; // ms
+
 /**
  * @param {string} steamId
  * @returns {Promise<number[]>}
  */
 async function fetchAppids(steamId) {
-  const res = await fetch(`${WORKER_URL}/wishlist/${encodeURIComponent(steamId)}`);
+  let res;
+  try {
+    res = await fetch(
+      `${WORKER_URL}/wishlist/${encodeURIComponent(steamId)}`,
+      { signal: AbortSignal.timeout(FETCH_TIMEOUT) },
+    );
+  } catch (err) {
+    throw new Error(
+      err.name === 'TimeoutError'
+        ? 'Le serveur met trop de temps à répondre. Réessayez.'
+        : 'Erreur réseau. Vérifiez votre connexion.',
+    );
+  }
+
   const data = await res.json();
 
   if (!res.ok) {
@@ -110,7 +126,19 @@ async function fetchAllItems(appids, onProgress) {
  */
 async function fetchItemBatch(appids) {
   const params = new URLSearchParams({ appids: appids.join(','), cc: 'FR', l: 'french' });
-  const res = await fetch(`${WORKER_URL}/items?${params}`);
+  let res;
+  try {
+    res = await fetch(
+      `${WORKER_URL}/items?${params}`,
+      { signal: AbortSignal.timeout(FETCH_TIMEOUT) },
+    );
+  } catch (err) {
+    throw new Error(
+      err.name === 'TimeoutError'
+        ? 'Le serveur met trop de temps à répondre. Réessayez.'
+        : 'Erreur réseau. Vérifiez votre connexion.',
+    );
+  }
   const data = await res.json();
 
   if (!res.ok) {

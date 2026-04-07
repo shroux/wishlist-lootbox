@@ -13,6 +13,7 @@ const _state = {
   history:         [],
   muted:           false,
   loadingProgress: { current: 0, total: 0 },
+  cacheAgeMs:      null,
 };
 
 /** @type {Array<(state: import('./app.js').AppState) => void>} */

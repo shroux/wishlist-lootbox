@@ -15,6 +15,7 @@
  *   history:  import('./history.js').DrawnGame[],
  *   muted:    boolean,
  *   loadingProgress: { current: number, total: number },
+ *   cacheAgeMs: number|null,
  * }} AppState
  */
 
@@ -22,6 +23,7 @@ import { loadWishlist }           from './steam-api.js';
 import { drawFromPool }           from './lootbox-engine.js';
 import { getState, setState, subscribe } from './state.js';
 import { getHistory, addToHistory, clearHistory } from './history.js';
+import { getCachedWishlist, setCachedWishlist, clearCachedWishlist, getCacheAgeMs } from './cache.js';
 import * as ui from './ui.js';
 import { playAnimation }          from './animation.js';
 
@@ -42,6 +44,7 @@ subscribe((state) => {
 
   if (state.view === 'dashboard') {
     ui.updateDashboard(state);
+    ui.updateCacheAge(state.cacheAgeMs);
   }
 });
 
@@ -63,7 +66,39 @@ document.getElementById('loadForm').addEventListener('submit', async (e) => {
   const steamId = document.getElementById('steamId').value.trim();
   if (!steamId) return;
 
+  // Validation format Steam ID 64-bit (17 chiffres commençant par 7656)
+  if (!/^\d{17}$/.test(steamId) || !steamId.startsWith('7656')) {
+    ui.setHomeError('Steam ID invalide. Saisissez un ID 64-bit (17 chiffres commençant par 7656).');
+    return;
+  }
+
   ui.setHomeError('');
+
+  // ── Cache hit : aller directement au dashboard sans passer par loading ──
+  const cached = getCachedWishlist(steamId);
+  if (cached) {
+    const { wishlist } = cached;
+    const history  = getHistory(steamId);
+    const drawnIds = new Set(history.map(g => g.appid));
+    const pool     = { bronze: [], silver: [], gold: [] };
+    for (const tier of ['bronze', 'silver', 'gold']) {
+      for (const g of wishlist[tier]) {
+        if (!drawnIds.has(g.appid)) pool[tier].push(g);
+      }
+    }
+    const allEmpty = Object.values(pool).every(p => p.length === 0);
+    setState({
+      view: allEmpty ? 'empty' : 'dashboard',
+      steamId,
+      wishlist,
+      pool,
+      history,
+      cacheAgeMs: getCacheAgeMs(steamId),
+    });
+    return;
+  }
+
+  // ── Cache miss : fetch normal ───────────────────────────────────────────
   setState({
     view:            'loading',
     steamId,
@@ -75,19 +110,18 @@ document.getElementById('loadForm').addEventListener('submit', async (e) => {
       setState({ loadingProgress: { current: loaded, total } });
     });
 
+    setCachedWishlist(steamId, wishlist);
+
     const history = getHistory(steamId);
 
-    // Le pool est une copie shallow des tableaux wishlist
-    const pool = {
-      bronze: [...wishlist.bronze],
-      silver: [...wishlist.silver],
-      gold:   [...wishlist.gold],
-    };
-
-    // Retirer du pool les jeux déjà dans l'historique
+    // Le pool est une copie shallow des tableaux wishlist,
+    // filtrée en un seul parcours pour retirer les jeux déjà dans l'historique
     const drawnIds = new Set(history.map(g => g.appid));
+    const pool = { bronze: [], silver: [], gold: [] };
     for (const tier of ['bronze', 'silver', 'gold']) {
-      pool[tier] = pool[tier].filter(g => !drawnIds.has(g.appid));
+      for (const g of wishlist[tier]) {
+        if (!drawnIds.has(g.appid)) pool[tier].push(g);
+      }
     }
 
     const allEmpty = Object.values(pool).every(p => p.length === 0);
@@ -97,6 +131,7 @@ document.getElementById('loadForm').addEventListener('submit', async (e) => {
       wishlist,
       pool,
       history,
+      cacheAgeMs: 0,
     });
 
   } catch (err) {
@@ -123,6 +158,10 @@ document.querySelectorAll('[data-draw-tier]').forEach(btn => {
 
     await playAnimation(game);
 
+    // Réactiver explicitement avant setState pour éviter tout état bloqué
+    // (updateDashboard re-désactivera les boutons de tiers vides si view==='dashboard')
+    document.querySelectorAll('[data-draw-tier]').forEach(b => { b.disabled = false; });
+
     const newHistory = addToHistory(state.steamId, game);
     const allEmpty   = Object.values(state.pool).every(p => p.length === 0);
 
@@ -139,43 +178,59 @@ document.querySelectorAll('[data-draw-tier]').forEach(btn => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// DASHBOARD — reset pool
+// RESET POOL (partagé entre dashboard et vue empty)
 // ═══════════════════════════════════════════════════════════════════════════
 
-document.getElementById('resetPoolBtn').addEventListener('click', () => {
+function doReset() {
   const { wishlist, steamId } = getState();
-
   clearHistory(steamId);
-
+  // Ne pas toucher le cache wishlist — seuls les tirages sont réinitialisés
   const pool = {
     bronze: [...wishlist.bronze],
     silver: [...wishlist.silver],
     gold:   [...wishlist.gold],
   };
-
-  // Cacher le résultat précédent
   const drawResult = document.getElementById('draw-result');
   if (drawResult) drawResult.hidden = true;
-
   setState({ view: 'dashboard', pool, history: [] });
-});
+}
+
+document.getElementById('resetPoolBtn').addEventListener('click', doReset);
+document.getElementById('emptyResetBtn').addEventListener('click', doReset);
 
 // ═══════════════════════════════════════════════════════════════════════════
-// EMPTY — reset depuis la vue "pool vide"
+// DASHBOARD — actualiser la wishlist (force le re-fetch et vide le cache)
 // ═══════════════════════════════════════════════════════════════════════════
 
-document.getElementById('emptyResetBtn').addEventListener('click', () => {
-  const { wishlist, steamId } = getState();
+document.getElementById('refreshWishlistBtn').addEventListener('click', async () => {
+  const { steamId } = getState();
+  if (!steamId) return;
 
-  clearHistory(steamId);
+  clearCachedWishlist(steamId);
+  setState({ view: 'loading', loadingProgress: { current: 0, total: 0 } });
 
-  const pool = {
-    bronze: [...wishlist.bronze],
-    silver: [...wishlist.silver],
-    gold:   [...wishlist.gold],
-  };
+  try {
+    const wishlist = await loadWishlist(steamId, ({ loaded, total }) => {
+      setState({ loadingProgress: { current: loaded, total } });
+    });
 
-  setState({ view: 'dashboard', pool, history: [] });
+    setCachedWishlist(steamId, wishlist);
+
+    const history  = getHistory(steamId);
+    const drawnIds = new Set(history.map(g => g.appid));
+    const pool     = { bronze: [], silver: [], gold: [] };
+    for (const tier of ['bronze', 'silver', 'gold']) {
+      for (const g of wishlist[tier]) {
+        if (!drawnIds.has(g.appid)) pool[tier].push(g);
+      }
+    }
+    const allEmpty = Object.values(pool).every(p => p.length === 0);
+    setState({ view: allEmpty ? 'empty' : 'dashboard', wishlist, pool, history, cacheAgeMs: 0 });
+
+  } catch (err) {
+    setState({ view: 'dashboard' });
+    console.error(err);
+  }
 });
 
 // ═══════════════════════════════════════════════════════════════════════════

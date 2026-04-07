@@ -7,6 +7,7 @@
 /** @typedef {import('./lootbox-engine.js').Game & { drawnAt: string }} DrawnGame */
 
 const KEY = (steamId) => `lootbox_history_${steamId}`;
+const HISTORY_MAX = 500; // cap pour éviter QuotaExceededError
 
 /**
  * Charge l'historique pour un Steam ID.
@@ -30,7 +31,14 @@ export function getHistory(steamId) {
 export function addToHistory(steamId, game) {
   const history = getHistory(steamId);
   history.unshift({ ...game, drawnAt: new Date().toISOString() });
-  localStorage.setItem(KEY(steamId), JSON.stringify(history));
+  // Rotation FIFO : ne garder que les HISTORY_MAX entrées les plus récentes
+  if (history.length > HISTORY_MAX) history.length = HISTORY_MAX;
+  try {
+    localStorage.setItem(KEY(steamId), JSON.stringify(history));
+  } catch {
+    // QuotaExceededError : l'état en mémoire reste correct, seule la persistence échoue
+    console.warn('[lootbox] localStorage quota dépassé — historique non sauvegardé.');
+  }
   return history;
 }
 

@@ -7,6 +7,8 @@
 /** @typedef {import('./lootbox-engine.js').Game} Game */
 /** @typedef {import('./history.js').DrawnGame} DrawnGame */
 
+import { esc as _esc } from './utils.js';
+
 const TIER_LABEL = { bronze: 'Bronze', silver: 'Argent', gold: 'Or' };
 const TIER_ICON  = { bronze: '⚙', silver: '✦', gold: '★' };
 
@@ -183,6 +185,23 @@ export function renderHistory(history) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// CACHE AGE
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Met à jour le libellé d'âge du cache dans le header du dashboard.
+ * @param {number | null} ageMs  — null ou 0 = données fraîches, pas d'affichage
+ */
+export function updateCacheAge(ageMs) {
+  const el = document.getElementById('cache-age');
+  if (!el) return;
+  if (!ageMs) { el.textContent = ''; return; }
+  const h = Math.floor(ageMs / 3_600_000);
+  const m = Math.floor((ageMs % 3_600_000) / 60_000);
+  el.textContent = h > 0 ? `il y a ${h}h` : m > 0 ? `il y a ${m} min` : '';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // MUTE
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -290,16 +309,3 @@ function _formatDate(isoString) {
   }
 }
 
-/**
- * Échappe les caractères HTML dans une chaîne.
- * @param {string} str
- * @returns {string}
- */
-function _esc(str) {
-  return String(str ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}

@@ -9,6 +9,7 @@
  */
 
 import { playAnticipation, stopAnticipation, playOpen, playReveal } from './audio.js';
+import { esc as _esc } from './utils.js';
 
 // ─── Config par tier ───────────────────────────────────────────────────────
 
@@ -265,16 +266,3 @@ function _buildRevealCardHTML(game, tc) {
     </div>`;
 }
 
-/**
- * Échappe les caractères HTML dangereux.
- * @param {string} str
- * @returns {string}
- */
-function _esc(str) {
-  return String(str ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
